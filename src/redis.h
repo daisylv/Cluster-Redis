@@ -784,11 +784,6 @@ struct redisServer {
     int watchdog_period;  /* Software watchdog period in ms. 0 = off */
 };
 
-typedef struct clusterlist {
-	struct cluster *_cluster;
-	struct clusterlist *next;
-} clusterlist;
-
 typedef struct pubsubPattern {
     redisClient *client;
     robj *pattern;

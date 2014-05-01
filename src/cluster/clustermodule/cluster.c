@@ -236,3 +236,111 @@ const char* getserver(cluster *_cluster, char *key) {
 	//cur = conhash_lookup(pa->conhash, key);
 	return cur->iden;
 }
+
+void LoadClusterData(clusterlist *_clusterlisthead, char *filename) {
+	_clusterlisthead = NULL;
+	clusterlist *_clusterlisttail = NULL;
+	FILE *fd;
+	fd = fopen(filename, "r");
+	if (fd == NULL){
+		printf("error when loading cluster data...");
+		return;
+	}
+	char buffer[256] = "";
+	fgets(buffer, 256, fd);
+	int num = atoi(buffer);
+	if (num == 0)
+		return;
+	int i;
+	for(i = 0; i < num; ++i) {
+		fgets(buffer, 256, fd);
+		if (strcmp(buffer, "start\n") != 0) {
+			continue;
+		}
+		if (strcmp(buffer, "end\n") == 0)
+			continue;
+		fgets(buffer, 256, fd);
+		int len = strlen(buffer);
+		buffer[len-1] = '\0';
+		char clustername[64];
+		strcpy(clustername, buffer);
+		cluster *_cluster = initialcluster(clustername);
+
+		fgets(buffer, 256, fd);
+		len = strlen(buffer);
+		buffer[len-1] = '\0';
+		char groups[128];
+		strcpy(groups, buffer);
+		clusteraddnode(_cluster, groups);
+		while (fgets(buffer, 256, fd) != NULL) {
+			len = strlen(buffer);
+			buffer[len-1] = '\0';
+			char nodeinfo[128] = "";
+			strcpy(nodeinfo, buffer);
+			char *parent = strtok(nodeinfo, " ");
+			char *child = strtok(NULL, " ");
+			while (child != NULL) {
+				addnodechild(_cluster, child, parent);
+				child = strtok(NULL, " ");
+			}
+		}
+		if(_clusterlisthead == NULL) {
+			_clusterlisthead = (clusterlist*)malloc(sizeof(clusterlist));
+			_clusterlisthead->_cluster = _cluster;
+			_clusterlisthead->next = NULL;
+			_clusterlisttail = _clusterlisthead;
+		}
+		else {
+			clusterlist *newcluster = (clusterlist*)malloc(sizeof(clusterlist));
+			newcluster->_cluster = _cluster;
+			newcluster->next = NULL;
+			_clusterlisttail->next = newcluster;
+			_clusterlisttail = _clusterlisttail->next;
+		}
+	}
+}
+
+void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
+	if(_clusterlisthead != NULL) {
+		FILE *cdbfd = fopen(filename, "a+");
+		char buffer[64] = "";
+		char *data;
+		data = fgets(buffer, 64, cdbfd);
+		int sum =  atoi(data);
+		clusterlist *cur  = _clusterlisthead;
+		while(cur != NULL) {
+			if(write(cdbfd, cur->cluster->clustername, 64) <= 0) {
+				break;
+			}
+			++sum;
+			char path[1024] = "";
+			writenodes(cdbfd, nodelisthead, path);
+		}
+	}
+}
+
+void writenodes(FILE *file, node_s_inlist *nodelisthead, char *path) {
+	char full[256] = "";
+	strcat(full, path);
+	if(!full) {
+		strcat(full, ".");
+	}
+	strcat(full, nodelisthead->node_s->iden)
+	write(file, full, 256);
+	if (!nodelisthead->next && !nodelisthead->childern) {
+		return;
+	}
+	if (nodelisthead->next) {
+		writenodes(file, nodelisthead->next, path);
+	}	
+	if (!path) {
+		strcat(path, ".");
+		strcat(path, nodelisthead->node_s->iden);
+	}
+	else {
+		strcat(path, nodelisthead->node_s->iden);
+	}
+	if (nodelisthead->childern) {
+		writenodes(file, nodelisthead->childern, path);
+	}
+}

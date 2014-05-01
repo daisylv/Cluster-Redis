@@ -3022,68 +3022,6 @@ void redisOutOfMemoryHandler(size_t allocation_size) {
 
 clusterlist *_clusterlisthead, *_clusterlisttail;
 
-void LoadClusterData(char *filename) {
-	_clusterlisthead = NULL;
-	_clusterlisttail = NULL;
-	FILE *fd;
-	fd = fopen(filename, "r");
-	if (fd == NULL){
-		printf("error when loading cluster data...");
-		return;
-	}
-	char buffer[256] = "";
-	fgets(buffer, 256, fd);
-	int num = atoi(buffer);
-	if (num == 0)
-		return;
-	int i;
-	for(i = 0; i < num; ++i) {
-		fgets(buffer, 256, fd);
-		if (strcmp(buffer, "start\n") != 0) {
-			continue;
-		}
-		if (strcmp(buffer, "end\n") == 0)
-			continue;
-		fgets(buffer, 256, fd);
-		int len = strlen(buffer);
-		buffer[len-1] = '\0';
-		char clustername[64];
-		strcpy(clustername, buffer);
-		cluster *_cluster = initialcluster(clustername);
-
-		fgets(buffer, 256, fd);
-		len = strlen(buffer);
-		buffer[len-1] = '\0';
-		char groups[128];
-		strcpy(groups, buffer);
-		clusteraddnode(_cluster, groups);
-		while (fgets(buffer, 256, fd) != NULL) {
-			len = strlen(buffer);
-			buffer[len-1] = '\0';
-			char nodeinfo[128] = "";
-			strcpy(nodeinfo, buffer);
-			char *parent = strtok(nodeinfo, " ");
-			char *child = strtok(NULL, " ");
-			while (child != NULL) {
-				addnodechild(_cluster, child, parent);
-				child = strtok(NULL, " ");
-			}
-		}
-		if(_clusterlisthead == NULL) {
-			_clusterlisthead = (clusterlist*)malloc(sizeof(clusterlist));
-			_clusterlisthead->_cluster = _cluster;
-			_clusterlisthead->next = NULL;
-			_clusterlisttail = _clusterlisthead;
-		}
-		else {
-			clusterlist *newcluster = (clusterlist*)malloc(sizeof(clusterlist));
-			newcluster->_cluster = _cluster;
-			newcluster->next = NULL;
-			_clusterlisttail->next = newcluster;
-			_clusterlisttail = _clusterlisttail->next;
-		}
-	}
-}
 
 void redisSetProcTitle(char *title) {
 #ifdef USE_SETPROCTITLE
@@ -3098,7 +3036,7 @@ void redisSetProcTitle(char *title) {
 
 int main(int argc, char **argv) {
 
-    LoadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
+    LoadClusterData(_clusterlisthead, "/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
 
     struct timeval tv;
 

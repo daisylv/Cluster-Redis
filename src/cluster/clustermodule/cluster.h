@@ -23,6 +23,11 @@ typedef struct cluster {
 	struct conhash_s *conhash;
 } cluster;
 
+typedef struct clusterlist {
+	struct cluster *_cluster;
+	struct clusterlist *next;
+} clusterlist;
+
 cluster* initialcluster(char *name);
 void clusteraddnode(cluster *_cluster, char *nodenamelist);
 void removeclusternode(cluster *_cluster, char * nodenamelist);
@@ -30,5 +35,8 @@ void addnodechild(cluster *_cluster, char *target, char *childnodenamelist);
 void delnodechild(cluster *_cluster, char *target, char *childnodenamelist);
 const char * getserver(cluster *_cluster, char *key);
 
+void LoadClusterData(clusterlist* _clusterlisthead, char *filename);
+
+void SaveClusterDB(clusterlist* _clusterlisthead, char *filename);
 
 #endif /* CLUSTER_H_ */
