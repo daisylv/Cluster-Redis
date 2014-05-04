@@ -6,6 +6,7 @@
  */
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 #include "cluster.h"
 #include "../libconhash/conhash.h"
 
@@ -237,20 +238,19 @@ const char* getserver(cluster *_cluster, char *key) {
 	return cur->iden;
 }
 
-void LoadClusterData(clusterlist *_clusterlisthead, char *filename) {
-	_clusterlisthead = NULL;
+clusterlist * loadClusterData(char *filename) {
+	clusterlist *_clusterlist = NULL;
 	clusterlist *_clusterlisttail = NULL;
-	FILE *fd;
-	fd = fopen(filename, "r");
+	FILE *fd = fopen(filename, "r");
 	if (fd == NULL){
 		printf("error when loading cluster data...");
-		return;
+		return NULL;
 	}
 	char buffer[256] = "";
 	fgets(buffer, 256, fd);
 	int num = atoi(buffer);
 	if (num == 0)
-		return;
+		return NULL;
 	int i;
 	for(i = 0; i < num; ++i) {
 		fgets(buffer, 256, fd);
@@ -284,11 +284,11 @@ void LoadClusterData(clusterlist *_clusterlisthead, char *filename) {
 				child = strtok(NULL, " ");
 			}
 		}
-		if(_clusterlisthead == NULL) {
-			_clusterlisthead = (clusterlist*)malloc(sizeof(clusterlist));
-			_clusterlisthead->_cluster = _cluster;
-			_clusterlisthead->next = NULL;
-			_clusterlisttail = _clusterlisthead;
+		if(_clusterlist== NULL) {
+			_clusterlist = (clusterlist*)malloc(sizeof(clusterlist));
+			_clusterlist->_cluster = _cluster;
+			_clusterlist->next = NULL;
+			_clusterlisttail = _clusterlist;
 		}
 		else {
 			clusterlist *newcluster = (clusterlist*)malloc(sizeof(clusterlist));
@@ -298,6 +298,7 @@ void LoadClusterData(clusterlist *_clusterlisthead, char *filename) {
 			_clusterlisttail = _clusterlisttail->next;
 		}
 	}
+	return _clusterlist;
 }
 
 void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
@@ -309,12 +310,12 @@ void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
 		int sum =  atoi(data);
 		clusterlist *cur  = _clusterlisthead;
 		while(cur != NULL) {
-			if(write(cdbfd, cur->cluster->clustername, 64) <= 0) {
+			if(write(cdbfd, cur->_cluster->clustername, 64) <= 0) {
 				break;
 			}
 			++sum;
 			char path[1024] = "";
-			writenodes(cdbfd, nodelisthead, path);
+			writenodes(cdbfd, _clusterlisthead, path);
 		}
 	}
 }
@@ -325,7 +326,7 @@ void writenodes(FILE *file, node_s_inlist *nodelisthead, char *path) {
 	if(!full) {
 		strcat(full, ".");
 	}
-	strcat(full, nodelisthead->node_s->iden)
+	strcat(full, nodelisthead->node->iden);
 	write(file, full, 256);
 	if (!nodelisthead->next && !nodelisthead->childern) {
 		return;
@@ -335,10 +336,10 @@ void writenodes(FILE *file, node_s_inlist *nodelisthead, char *path) {
 	}	
 	if (!path) {
 		strcat(path, ".");
-		strcat(path, nodelisthead->node_s->iden);
+		strcat(path, nodelisthead->node->iden);
 	}
 	else {
-		strcat(path, nodelisthead->node_s->iden);
+		strcat(path, nodelisthead->node->iden);
 	}
 	if (nodelisthead->childern) {
 		writenodes(file, nodelisthead->childern, path);

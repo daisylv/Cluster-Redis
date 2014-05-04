@@ -1,11 +1,17 @@
-# Top level makefile, the real shit is at src/Makefile
+BIN=./cluster/clustermodule
 
-default: all
+ifeq ($(CFLAG), DEBUG)
+CFLAGS += -g
+endif
 
-.DEFAULT:
-	cd src && $(MAKE) $@
+AR  = ar -cqs
+# itermidiate objects
+OBJ = $(addprefix $(BIN)/, \
+	  cluster.o \
+	  )
+# include file path
+INC = -I. -I.
 
-install:
-	cd src && $(MAKE) $@
-
-.PHONY: install
+$(BIN)/%.o:%.c ../libconhash/conhash.h
+	gcc $(INC) $(CFLAGS) -c $< -o $@
+all:

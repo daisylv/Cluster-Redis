@@ -3020,7 +3020,7 @@ void redisOutOfMemoryHandler(size_t allocation_size) {
     redisPanic("Redis aborting for OUT OF MEMORY");
 }
 
-clusterlist *_clusterlisthead, *_clusterlisttail;
+clusterlist *_clusterlisthead;
 
 
 void redisSetProcTitle(char *title) {
@@ -3036,7 +3036,8 @@ void redisSetProcTitle(char *title) {
 
 int main(int argc, char **argv) {
 
-    LoadClusterData(_clusterlisthead, "/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
+	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
+	printf("%s\n",_clusterlisthead->_cluster->clustername);
 
     struct timeval tv;
 

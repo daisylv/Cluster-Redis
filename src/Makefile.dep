@@ -113,3 +113,10 @@ ziplist.o: ziplist.c zmalloc.h util.h sds.h ziplist.h endianconv.h \
   config.h redisassert.h
 zipmap.o: zipmap.c zmalloc.h endianconv.h config.h
 zmalloc.o: zmalloc.c config.h zmalloc.h
+
+cluster.o: cluster.c cluster/clustermodule/cluster.h cluster/libconhash/conhash.h
+conhash.o: conhash.c cluster/libconhash/conhash.h cluster/libconhash/conhash_inter.h
+conhash_inter.o: conhash_inter.c cluster/libconhash/conhash_inter.h cluster/libconhash/conhash.h
+conhash_util.o: conhash_util.c cluster/libconhash/conhash.h cluster/libconhash/conhash_inter.h
+md5.o: md5.c cluster/libconhash/md5.h
+util_rbtree.o: util_rbtree.c cluster/libconhash/util_rbtree.h
