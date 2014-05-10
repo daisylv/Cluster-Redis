@@ -18,7 +18,7 @@ typedef struct node_s_inlist {
 } node_s_inlist;
 
 typedef struct cluster {
-	char* clustername;
+	char clustername[64];
 	node_s_inlist* nodelisthead;//head
 	struct conhash_s *conhash;
 } cluster;

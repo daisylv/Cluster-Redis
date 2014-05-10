@@ -28,6 +28,7 @@
  */
 
 #include "redis.h"
+#include "cluster/clustermodule/cluster.h"
 #include <math.h> /* isnan(), isinf() */
 
 /*-----------------------------------------------------------------------------
@@ -90,9 +91,31 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
     addReply(c, ok_reply ? ok_reply : shared.ok);
 }
 
+extern clusterlist *_clusterlisthead;
 void clusterCommand(redisClient *c) {
 	printf("will redirect...");
-	//look up for cluster...
+	printf("is redirect...");
+	char *name = _clusterlisthead->_cluster->clustername;
+	clusterlist* targetCluster = _clusterlisthead;
+	while(targetCluster) {
+		if(strcmp((char*)c->argv[1]->ptr, targetCluster->_cluster->clustername) == 0) {
+			break;
+		}
+	}
+	if(!targetCluster) {
+		printf("cluster name dose not exist...");
+		return ;
+	}
+	else {
+		//TODO
+		//send to right port...
+		//char *newString = getTCPProtocalString(c);
+		//sendToRightPort(newString);
+		//read from socket
+		//printf();
+		//addReplyBulk
+		return;
+	}
 }
 
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */
