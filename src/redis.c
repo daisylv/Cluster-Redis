@@ -3037,8 +3037,8 @@ void redisSetProcTitle(char *title) {
 
 int main(int argc, char **argv) {
 
-	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
-	//printf("%s\n",_clusterlisthead->_cluster->clustername);
+	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster2.cdb");
+	printf("%s\n",_clusterlisthead->_cluster->clustername);
 	socketmap = hashmap_create();
     struct timeval tv;
 

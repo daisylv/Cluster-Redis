@@ -115,6 +115,7 @@ zipmap.o: zipmap.c zmalloc.h endianconv.h config.h
 zmalloc.o: zmalloc.c config.h zmalloc.h
 
 cluster.o: cluster.c cluster/clustermodule/cluster.h cluster/libconhash/conhash.h
+hashmap.o: hashmap.c cluster/clustermodule/hashmap.h
 conhash.o: conhash.c cluster/libconhash/conhash.h cluster/libconhash/conhash_inter.h
 conhash_inter.o: conhash_inter.c cluster/libconhash/conhash_inter.h cluster/libconhash/conhash.h
 conhash_util.o: conhash_util.c cluster/libconhash/conhash.h cluster/libconhash/conhash_inter.h

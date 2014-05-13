@@ -30,6 +30,7 @@
 #include "redis.h"
 #include "cluster/clustermodule/cluster.h"
 #include "cluster/clustermodule/hashmap.h"
+#include "hiredis.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,7 +98,7 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
 }
 
 extern clusterlist *_clusterlisthead;
-extern hmap_t hashmap;
+extern hmap_t socketmap;
 void clusterCommand(redisClient *c) {
 	printf("will redirect...");
 	printf("is redirect...");
@@ -107,6 +108,7 @@ void clusterCommand(redisClient *c) {
 		if(strcmp((char*)c->argv[1]->ptr, targetCluster->_cluster->clustername) == 0) {
 			break;
 		}
+		targetCluster = targetCluster->next;
 	}
 	if(!targetCluster) {
 		printf("cluster name dose not exist...");
@@ -122,20 +124,22 @@ void clusterCommand(redisClient *c) {
 		//addReplyBulk
 
 		char server[32] = "";
-		strcpy(server, getserver(targetCluster, (char*)c->argv[3]->ptr));
+		strcpy(server, getserver(targetCluster->_cluster, (char*)c->argv[3]->ptr));
 		//TODO should see if it is connected...
-		redisContext context = hashmap_get(server);
-		if(!context) {
+		redisContext *context = NULL;
+		int ret = hashmap_get(socketmap, server, context);
+		if(ret < 0 || !context) {
 			struct timeval timeout = { 1, 500000 }; // 1.5 seconds
 			char *ipaddress = strtok(server, ":");
 			int port = atoi(strtok(NULL, ":"));
 			context = redisConnectWithTimeout(ipaddress, port, timeout);
 //			sfd = getConnectSocket(server);
-			hashmap_put(server, context);
+			hashmap_put(socketmap, server, context);
 		}
 		redisReply *reply;
 		//reply = redisCommand(context, "%s %s %s");
-		//redisAppendCommandArgv(context,c->argc-2,(const char**)c->argv,argvlen);
+		size_t *argvlen = malloc((c->argc-2)*sizeof(size_t));
+		redisAppendCommandArgv(context,c->argc-2,(const char**)c->argv+2,argvlen);
 		//if (redisGetReply(context,&_reply) != REDIS_OK) {
 //		send(sfd, cmdBuffer, 1024, 0);
 		return;

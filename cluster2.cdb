@@ -1,0 +1,7 @@
+1
+start
+testcluster
+group1 group2
+group1 127.0.0.1:6379
+group2 127.0.0.1:6380
+end
