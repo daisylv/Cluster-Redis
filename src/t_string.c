@@ -97,7 +97,17 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
 }
 
 extern clusterlist *_clusterlisthead;
+/*
+ * Store the socket file discriptor.
+ * key: 'ip:port'
+ * value: sfd
+ */
 extern hmap_t hashmap;
+
+/*
+ * Process cluster-related command,
+ * first will get the cluster and send redis command to target server
+ */
 void clusterCommand(redisClient *c) {
 	printf("will redirect...");
 	printf("is redirect...");
@@ -143,17 +153,21 @@ void clusterCommand(redisClient *c) {
 
 }
 
-//int getConnectSocket(char *server) {
-//	char buf[32];
-//	strcpy(buf, server);
-//	int sfd, rv;
-//	char *addr = strtok(buf, ":");
-//	char *_port = strtok(NULL, ":");
-//	struct addrinfo hints, *servinfo, *p;
-//	memset(&hints, 0, sizeof(hints));
-//	hints.ai_family = AF_INET;
+// /*
+//  * Create a new socket and connect to the socket.
+//  * Will add to the hashmap if success.
+//  */
+// int createConnectSocket(char *server) {
+// 	char buf[32];
+// 	strcpy(buf, server);
+// 	int sfd, rv;
+// 	char *addr = strtok(buf, ":");
+// 	char *_port = strtok(NULL, ":");
+// 	struct addrinfo hints, *servinfo, *p;
+// 	memset(&hints, 0, sizeof(hints));
+// 	hints.ai_family = AF_INET;
 //    hints.ai_socktype = SOCK_STREAM;
-//
+
 //    if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
 //             hints.ai_family = AF_INET6;
 //             if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
@@ -171,8 +185,11 @@ void clusterCommand(redisClient *c) {
 //        	return -1;
 //    }
 //    return sfd;
-//}
+// }
 
+/*
+ * Convert the arguments in the client buffer to the right protocal of redis.
+ */
 //getClusterProtocalCommand(redisClient *c) {
 //	char cmdBuffer[1024] = "";
 //	int length = 3;
