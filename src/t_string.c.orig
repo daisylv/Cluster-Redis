@@ -99,13 +99,14 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
 
 extern clusterlist *_clusterlisthead;
 <<<<<<< HEAD
+extern hmap_t socketmap;
 =======
 /*
  * Store the socket file discriptor.
  * key: 'ip:port'
  * value: sfd
  */
-extern hmap_t socketmap;
+extern hmap_t hashmap;
 
 /*
  * Process cluster-related command,
