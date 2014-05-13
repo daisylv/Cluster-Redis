@@ -29,6 +29,11 @@
 
 #include "redis.h"
 #include "cluster/clustermodule/cluster.h"
+#include "cluster/clustermodule/hashmap.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <math.h> /* isnan(), isinf() */
 
 /*-----------------------------------------------------------------------------
@@ -92,6 +97,7 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
 }
 
 extern clusterlist *_clusterlisthead;
+extern hmap_t hashmap;
 void clusterCommand(redisClient *c) {
 	printf("will redirect...");
 	printf("is redirect...");
@@ -114,9 +120,76 @@ void clusterCommand(redisClient *c) {
 		//read from socket
 		//printf();
 		//addReplyBulk
+
+		char server[32] = "";
+		strcpy(server, getserver(targetCluster, (char*)c->argv[3]->ptr));
+		//TODO should see if it is connected...
+		redisContext context = hashmap_get(server);
+		if(!context) {
+			struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+			char *ipaddress = strtok(server, ":");
+			int port = atoi(strtok(NULL, ":"));
+			context = redisConnectWithTimeout(ipaddress, port, timeout);
+//			sfd = getConnectSocket(server);
+			hashmap_put(server, context);
+		}
+		redisReply *reply;
+		//reply = redisCommand(context, "%s %s %s");
+		//redisAppendCommandArgv(context,c->argc-2,(const char**)c->argv,argvlen);
+		//if (redisGetReply(context,&_reply) != REDIS_OK) {
+//		send(sfd, cmdBuffer, 1024, 0);
 		return;
 	}
+
 }
+
+//int getConnectSocket(char *server) {
+//	char buf[32];
+//	strcpy(buf, server);
+//	int sfd, rv;
+//	char *addr = strtok(buf, ":");
+//	char *_port = strtok(NULL, ":");
+//	struct addrinfo hints, *servinfo, *p;
+//	memset(&hints, 0, sizeof(hints));
+//	hints.ai_family = AF_INET;
+//    hints.ai_socktype = SOCK_STREAM;
+//
+//    if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
+//             hints.ai_family = AF_INET6;
+//             if ((rv = getaddrinfo(addr,_port,&hints,&servinfo)) != 0) {
+//                printf("error address\n");
+//                return -1;
+//            }
+//        }
+//    p = servinfo;
+//    if ((sfd = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == -1){
+//    	printf("error create socket\n");
+//        return -1;
+//    }
+//    if (connect(sfd,p->ai_addr,p->ai_addrlen) == -1){
+//        	printf("connect error\n");
+//        	return -1;
+//    }
+//    return sfd;
+//}
+
+//getClusterProtocalCommand(redisClient *c) {
+//	char cmdBuffer[1024] = "";
+//	int length = 3;
+//	cmdBuffer[0] = '*';
+//	cmdBuffer[1] = c->argc-2+'0';
+//	cmdBuffer[2] = '$';
+//	int count = 2;
+////	int sum = c->argc;
+//	while(count < c->argc) {
+//		strcpy(cmdBuffer+length, "\r\n");
+//		length += 2;
+//		int len = strlen((char *)c->argv[count]->ptr);
+//		cmdBuffer[length++] = len;
+//		strcpy(cmdBuffer+length, (char *)c->argv[count]->ptr);
+//		length += len;
+//	}
+//}
 
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */
 void setCommand(redisClient *c) {

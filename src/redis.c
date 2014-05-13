@@ -31,6 +31,7 @@
 #include "slowlog.h"
 #include "bio.h"
 #include "cluster/clustermodule/cluster.h"
+#include "cluster/clustermodule/hashmap.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3021,7 +3022,7 @@ void redisOutOfMemoryHandler(size_t allocation_size) {
 }
 
 clusterlist *_clusterlisthead;
-
+hmap_t socketmap;
 
 void redisSetProcTitle(char *title) {
 #ifdef USE_SETPROCTITLE
@@ -3037,8 +3038,8 @@ void redisSetProcTitle(char *title) {
 int main(int argc, char **argv) {
 
 	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster.cdb");
-	printf("%s\n",_clusterlisthead->_cluster->clustername);
-
+	//printf("%s\n",_clusterlisthead->_cluster->clustername);
+	socketmap = hashmap_create();
     struct timeval tv;
 
     /* We need to initialize our libraries, and the server configuration. */
