@@ -942,6 +942,11 @@ int redisFormatCommandArgv(char **target, int argc, const char **argv, const siz
     size_t len;
     int totlen, j;
 
+//    char *aa, *bb, *cc;
+//    aa = argv[0];
+//    bb = argv[1];
+//    cc = argv[2];
+//    printf("%s, %s, %s", aa, bb, cc);
     /* Calculate number of bytes needed for the command */
     totlen = 1+intlen(argc)+2;
     for (j = 0; j < argc; j++) {
@@ -1225,7 +1230,8 @@ int redisAppendCommand(redisContext *c, const char *format, ...) {
 int redisAppendCommandArgv(redisContext *c, int argc, const char **argv, const size_t *argvlen) {
     char *cmd;
     int len;
-
+//    char *a = argv[0];
+//    printf("%s", a);
     len = redisFormatCommandArgv(&cmd,argc,argv,argvlen);
     if (len == -1) {
         __redisSetError(c,REDIS_ERR_OOM,"Out of memory");
