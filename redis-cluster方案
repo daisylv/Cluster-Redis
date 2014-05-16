@@ -1,0 +1,52 @@
+multi-layerorganization node strength: you can decide multy Volatility data and data that will not be changed...for a period of time.
+
+1. 在集群改变的时候，没有较好的方案进行数据迁移，不能动态迁移。
+解决思路：对每个实例保留所有数据的哈希结果，在用户确认集群改变的时候将进行数据重定位与迁移，性能将受影响。
+
+2. 抽象层次过多会不断计算哈希值，并进行数据的重发送，对性能会造成影响。
+解决思路：需要考虑具体应用的情况合理抽象。
+
+3. 用户不能直接通过集群名字进行通讯。
+解决思路：用户可以通过任意一个集群内的端口进行访问集群，可获取集群信息用于应用。
+
+1. 集群改变的日志记录实现。
+2. 数据迁移的设计与实现。
+3. 集群信息与状态同步config文件的实现。
+4. 功能与性能测试。
+
+cluster new name 					//set: flag = CREATING_CLUSTER
+cluster name add group1				
+cluster name add group2
+cluster name.group1 add child1
+cluster setflag 					//begin to read all the key-values and resend to other ip and port... then
+									//set: flag = CLUSTER_FINISHED   ...then can execute other command...
+
+cluster name set mykey myvalue		
+cluster name get mykey myvalue
+
+0,noPreloadGetKeys,1,1,1,0,0
+
+
+cluster.cdb
+1
+start
+mycluster 
+group1 group2	//groups are in one line
+group1 childgroup1 childgroup2
+group1.childgroup1 127.0.0.1:6379 127.0.0.1:6380
+group1.childgroup2 127.0.0.1:6381
+group2 127.0.0.1:6382
+end
+
+
+
+networking.c 
+int processMultibulkBuffer(redisClient *c) {
+    printf("%s\n", (char*)(c->argv[0]->ptr));	//set
+    printf("%s\n", (char*)(c->argv[1]->ptr));	//mykey
+    printf("%s\n", (char*)(c->argv[2]->ptr));	//myvalue
+ }
+
+lookupCommand(c->argv[0]->ptr);
+
+call(c,REDIS_CALL_FULL);

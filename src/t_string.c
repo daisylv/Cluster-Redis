@@ -75,7 +75,7 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val,
 
 	if (expire) {
 		if (getLongLongFromObjectOrReply(c, expire, &milliseconds,
-				NULL) != REDIS_OK)
+		NULL) != REDIS_OK)
 			return;
 		if (milliseconds <= 0) {
 			addReplyError(c, "invalid expire time in SETEX");
@@ -135,7 +135,7 @@ void setCommand(redisClient *c) {
 
 	c->argv[2] = tryObjectEncoding(c->argv[2]);
 	setGenericCommand(c, flags, c->argv[1], c->argv[2], expire, unit, NULL,
-			NULL);
+	NULL);
 }
 
 void setnxCommand(redisClient *c) {
@@ -147,13 +147,13 @@ void setnxCommand(redisClient *c) {
 void setexCommand(redisClient *c) {
 	c->argv[3] = tryObjectEncoding(c->argv[3]);
 	setGenericCommand(c, REDIS_SET_NO_FLAGS, c->argv[1], c->argv[3], c->argv[2],
-			UNIT_SECONDS, NULL, NULL);
+	UNIT_SECONDS, NULL, NULL);
 }
 
 void psetexCommand(redisClient *c) {
 	c->argv[3] = tryObjectEncoding(c->argv[3]);
 	setGenericCommand(c, REDIS_SET_NO_FLAGS, c->argv[1], c->argv[3], c->argv[2],
-			UNIT_MILLISECONDS, NULL, NULL);
+	UNIT_MILLISECONDS, NULL, NULL);
 }
 
 int getGenericCommand(redisClient *c) {
@@ -556,6 +556,22 @@ void clusterCommand(redisClient *c) {
 	printf("is redirect...");
 	char *name = _clusterlisthead->_cluster->clustername;
 	clusterlist* targetCluster = _clusterlisthead;
+	if (strcmp((char*) c->argv[1]->ptr, "new") == 0) {
+		//will add new cluster
+		clusterlist *newCluster_in_list = (clusterlist*) malloc(
+				sizeof(clusterlist));
+		newCluster_in_list->_cluster = initialcluster((char*) c->argv[2]->ptr);
+		if (targetCluster == NULL) {
+			_clusterlisthead = newCluster_in_list;
+			return;
+		} else {
+			while (targetCluster->next != NULL) {
+				targetCluster = targetCluster->next;
+			}
+			targetCluster->next = newCluster_in_list;
+		}
+		return;
+	}
 	while (targetCluster) {
 		if (strcmp((char*) c->argv[1]->ptr,
 				targetCluster->_cluster->clustername) == 0) {
@@ -564,8 +580,21 @@ void clusterCommand(redisClient *c) {
 		targetCluster = targetCluster->next;
 	}
 	if (!targetCluster) {
-		printf("cluster name dose not exist...");
-		return;
+		char *reply = "cluster name dose not exist...";
+//		strcpy(c->buf, reply);
+//		c->bufpos = strlen(reply);
+		robj * obj = (robj *)calloc(1, sizeof(robj));
+		//char *tmp = (char*)malloc(50*sizeof(char));
+		obj->ptr = sdsnew(reply);
+		//strcpy(tmp, reply);
+//		obj->ptr = tmp;
+		obj->encoding = 0;
+//		aeCreateFileEvent(server.el, c->fd, AE_WRITABLE,
+//		        sendReplyToClient, c);
+		addReply(c, obj);
+		//write(c->fd, c->buf, c->bufpos);
+		//resetClient(c);
+		return ;
 	} else {
 		char server[32] = "";
 		strcpy(server,
@@ -581,7 +610,7 @@ void clusterCommand(redisClient *c) {
 			processCommand(c);
 			//free(r[0]);
 			//free(r[1]);
-			return;
+			return ;
 		}
 		redisContext *context = NULL;
 		int ret = hashmap_get(socketmap, server, context);
