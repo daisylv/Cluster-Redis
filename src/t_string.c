@@ -577,7 +577,8 @@ void clusterCommand(redisClient *c) {
 			robj **r = c->argv;
 			c->argv = &(c->argv[2]);
 			c->argc = c->argc - 2;
-			setCommand(c);
+
+			processCommand(c);
 			//free(r[0]);
 			//free(r[1]);
 			return;
@@ -619,8 +620,11 @@ void clusterCommand(redisClient *c) {
 //		}
 		char buffer[1024] = "";
 		char *command = context->obuf;
+		char cmd[100] = "";
+		strcpy(cmd, command);
 		printf("%s", command);
-		send(context->fd, context->obuf, 1024, 0);
+		printf("%s", cmd);
+		send(context->fd, cmd, 1024, 0);
 		int length = 0;
 		length = read(context->fd, buffer, 1024);
 		while (length) {
