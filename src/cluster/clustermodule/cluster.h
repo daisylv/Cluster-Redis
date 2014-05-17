@@ -34,9 +34,10 @@ void removeclusternode(cluster *_cluster, char * nodenamelist);
 void addnodechild(cluster *_cluster, char *target, char *childnodenamelist);
 void delnodechild(cluster *_cluster, char *target, char *childnodenamelist);
 const char * getserver(cluster *_cluster, char *key);
+void delcluster(char *name);
 
 clusterlist* loadClusterData(char *filename);
 
-void SaveClusterDB(clusterlist* _clusterlisthead, char *filename);
+void saveclusterdb(clusterlist* _clusterlisthead, char *filename);
 
 #endif /* CLUSTER_H_ */

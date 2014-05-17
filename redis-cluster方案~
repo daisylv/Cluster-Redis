@@ -18,7 +18,6 @@ cluster new name 					//set: flag = CREATING_CLUSTER
 cluster name add group1				
 cluster name add group2
 cluster name group1 add child1//??
-cluster name remove group1
 cluster setflag 					//begin to read all the key-values and resend to other ip and port... then
 									//set: flag = CLUSTER_FINISHED   ...then can execute other command...
 

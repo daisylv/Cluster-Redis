@@ -18,16 +18,20 @@ void free_node_s_inlist(node_s_inlist *listnode) {
 	if (listnode->next) {
 		free_node_s_inlist(listnode->next);
 	}
-	if (listnode->childern) {
+	if (listnode->childern && listnode->childern->node) {
 		free(listnode->childern->node);
 		free(listnode->childern);
 	}
-	if (listnode->next) {
+	if (listnode->next && listnode->next->node) {
 		free(listnode->next->node);
 		free(listnode->next);
 	}
-	free(listnode->node);
-	free(listnode);
+	if (listnode->childern)
+		free(listnode->childern);
+	if (listnode->node) {
+		free(listnode->node);
+		listnode->node = NULL;
+	}
 }
 
 cluster* initialcluster(char *name) {
@@ -93,6 +97,7 @@ void removeclusternode(cluster *_cluster, char * nodenamelist) {
 	char *nodename = strtok(a, ".");
 	while (nodename != NULL) {
 		node_s_inlist *cur = _cluster->nodelisthead;
+		node_s_inlist *parent;
 		while (cur != NULL) {
 			if (strcmp(cur->node->iden, nodename) == 0) {
 				conhash_del_node(_cluster->conhash, cur->node);
@@ -105,11 +110,17 @@ void removeclusternode(cluster *_cluster, char * nodenamelist) {
 					cur->next = cur->next->next;
 					free_node_s_inlist(gc);
 				} else {
+
 					free_node_s_inlist(cur);
 				}
+
+				cur = cur->next;
+				parent->next = cur;
 				break;
 			}
+			parent = cur;
 			cur = cur->next;
+			parent->next = cur;
 		}
 		nodename = strtok(NULL, ".");
 	}
@@ -213,6 +224,9 @@ void delnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 			free_node_s_inlist(gc);
 		} else {
 			free_node_s_inlist(cur);
+		}
+		if (parent->childern->node == NULL) {
+			removeclusternode(_cluster, parent->node->iden);
 		}
 	}
 }
