@@ -34,6 +34,7 @@ cluster* initialcluster(char *name) {
 	cluster *_cluster;
 	if (!name)
 		return NULL;
+	
 	_cluster = (cluster *) malloc(sizeof(cluster));
 	_cluster->clustername = name;
 	_cluster->conhash = conhash_init(NULL);

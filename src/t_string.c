@@ -554,7 +554,7 @@ int appendleftCommandArgv(char **target, int argc, const char **argv,
 void clusterCommand(redisClient *c) {
 	printf("will redirect...");
 	printf("is redirect...");
-	//char *name = _clusterlisthead->_cluster->clustername;
+	char *name = _clusterlisthead->_cluster->clustername;
 	clusterlist* targetCluster = _clusterlisthead;
 	if (strcmp((char*) c->argv[1]->ptr, "new") == 0) {
 		//will add new cluster
@@ -583,7 +583,7 @@ void clusterCommand(redisClient *c) {
 		char *reply = "cluster name dose not exist...";
 //		strcpy(c->buf, reply);
 //		c->bufpos = strlen(reply);
-		robj * obj = (robj *) calloc(1, sizeof(robj));
+		robj * obj = (robj *)calloc(1, sizeof(robj));
 		//char *tmp = (char*)malloc(50*sizeof(char));
 		obj->ptr = sdsnew(reply);
 		//strcpy(tmp, reply);
@@ -594,33 +594,8 @@ void clusterCommand(redisClient *c) {
 		addReply(c, obj);
 		//write(c->fd, c->buf, c->bufpos);
 		//resetClient(c);
-		return;
-	} else if (c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "add") == 0) {
-		int index = 3;
-		char nodebuf[256] = "";
-		char* pos = nodebuf;
-		while (index < c->argc) {
-			strcpy(pos, (char*) c->argv[index]->ptr);
-			*(++pos) = " ";
-			pos += strlen((char*) c->argv[index]->ptr);
-		}
-		clusteraddnode(targetCluster->_cluster, nodebuf);
-		robj * obj = (robj *) calloc(1, sizeof(robj));
-		obj->ptr = sdsnew("Add nodes successfully...");
-		obj->encoding = 0;
-		addReply(c, obj);
-		return;
-	} else if (c->argc == 5 && strcmp((char*) c->argv[3]->ptr, "add") == 0) {
-		addnodechild(targetCluster->_cluster, (char*) c->argv[4]->ptr,
-				(char*) c->argv[2]->ptr);
-		robj * obj = (robj *) calloc(1, sizeof(robj));
-		obj->ptr = sdsnew("Add nodes successfully...");
-		obj->encoding = 0;
-		addReply(c, obj);
-		return;
-	} else if(c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "add") == 0) {
-
-	}else {
+		return ;
+	} else {
 		char server[32] = "";
 		strcpy(server,
 				getserver(targetCluster->_cluster, (char*) c->argv[3]->ptr));
@@ -635,7 +610,7 @@ void clusterCommand(redisClient *c) {
 			processCommand(c);
 			//free(r[0]);
 			//free(r[1]);
-			return;
+			return ;
 		}
 		redisContext *context = NULL;
 		int ret = hashmap_get(socketmap, server, context);
@@ -693,6 +668,7 @@ void clusterCommand(redisClient *c) {
 			}
 			length = read(context->fd, buffer, 1024);
 		}
+		//need to add addReply(c, robj);
 		return;
 	}
 
