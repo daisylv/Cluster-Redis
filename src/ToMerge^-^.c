@@ -65,18 +65,39 @@ void clusterCommand(redisClient *c) {
 		obj->encoding = 0;
 		addReply(c, obj);
 		return;
-	} else if(c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "remove") == 0) {
+	} else if (c->argc >= 3 && strcmp((char*) c->argv[2]->ptr, "editdone") == 0) {
 		char buf[128] = "";
 		char *str = "begin to migrate data, please wait...";
 		strcpy(buf, str);
 		write(c->fd, buf, strlen(str));
-		dataMigration(targetCluster->_cluster, (char*) c->argv[3]->ptr));
-		delnodechild(targetCluster->_cluster, (char*) c->argv[3]->ptr), (char*) c->argv[4]->ptr));
+
 		robj obj = (robj *)malloc(sizeof(robj));
-		obj->ptr = sdsnew("data migrate finished!");
 		obj->encoding = 0;
+
+		if ((childpid = fork()) == 0) {
+        	int retval;
+
+        	/* Child */
+        	closeListeningSockets(0);
+
+        	retval = dataMigration(targetCluster->_cluster, 
+				(char*) c->argv[3]->ptr));
+
+        	if (retval == 0) {
+            	obj->ptr = sdsnew("data migrate finished!");
+        	}
+        	exitFromChild((retval == 0) ? 0 : 1);
+    	} else {
+        /* Parent */
+        server.stat_fork_time = ustime()-start;
+        if (childpid == -1) {
+            obj->ptr = sdsnew("data migrate error!");
+        }
+        
 		addReply(c, obj); 
 		return;
+	} else if (c->argc >= 3 && strcmp((char*) c->argv[2]->ptr, "migrate") == 0) {
+
 	} else {
 		char server[32] = "";
 		strcpy(server,
@@ -155,9 +176,10 @@ void clusterCommand(redisClient *c) {
 
 }
 
-void dataMigration(cluster *_cluster, char *target, hmap_t socketmap) {
+int dataMigration(cluster *_cluster, char *target, hmap_t socketmap) {
 	int count = 0;
-	char **servers = get_all_leaves(_cluster, count);
+	char **servers = get_all_leaves(_cluster, &count);
+	int flags = 0;
 	int i = 0;
 	for(; i < count; ++i) {
 		char *server = servers[i];
@@ -170,8 +192,84 @@ void dataMigration(cluster *_cluster, char *target, hmap_t socketmap) {
 		}
 		//cluster name migrate
 		size_t *argvlen = malloc(sizeof(size_t));
-		argvlen[0] = 
-		char **argv = malloc(sizeof(char*));
+		char *cmd = malloc(8*sizeof(char));
+		cmd[7] = '\0';
+		argvlen[0] = strlen(cmd);
+		char **argv = malloc(1*sizeof(char*));
+		argv[0] = cmd;
+
 		appendleftCommandArgv(&(context->obuf), 1, argv, argvlen);
+		write(context->fd, context->obuf, 128);
+
+		char buffer[10] = "";
+		read(context->fd, buffer, 10);
+		if (strcmp(buffer, "done") == 0) {
+			flags++;
+		}
+		if (flags == count) {
+			break;
+		}
 	}
+}
+
+int migrate(cluster *_newcluster, redisClient c) {
+    dictIterator *di = NULL;
+    dictEntry *de;
+    int j;
+    long long now = mstime();
+
+    for (j = 0; j < server.dbnum; j++) {
+        redisDb *db = server.db+j;
+        dict *d = db->dict;
+        if (dictSize(d) == 0) continue;
+        di = dictGetSafeIterator(d);
+        if (!di) {
+            fclose(fp);
+            return REDIS_ERR;
+        }
+
+        /* Iterate this DB writing every entry */
+        while((de = dictNext(di)) != NULL) {
+            sds keystr = dictGetKey(de);
+            char newserver;
+            
+            initStaticStringObject(key,keystr);
+            newserver = getserver(_newcluster,&key);
+            if(strcmp(newserver, selfServer) == 0) {
+            	continue;
+            }
+            else {
+				robj key= dictGetVal(de);
+				redisContext *context = NULL;
+				int ret = hashmap_get(socketmap, server, context);
+
+				if (ret < 0 || !context) {
+					struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+					context = redisConnectWithTimeout(ipaddress, port, timeout);
+					hashmap_put(socketmap, server, context);
+				}
+
+				size_t *argvlen = malloc(3 * sizeof(size_t));
+				char **argv = malloc(3 * sizeof(char*));
+				getReSendCommand(&argvlen, &argv, keystr, key);
+
+				appendleftCommandArgv(&(context->obuf), c->argc - 2, argv, argvlen);
+
+				send(context->fd, context->obuf, 1024, 0);
+            }
+        }
+        dictReleaseIterator(di);
+    }
+}
+
+void getReSendCommand(size_t **argvlen, char ***argv) {
+	argv[0] = malloc(3*sizeof(char));
+	argvlen[0] = 3;
+	strcmp(argv[0], "set");
+	argv[1] = malloc(strlen(keystr->buf)*sizeof(char));
+	argvlen[1] = strlen(keystr->buf);
+	strcmp(argv[1], keystr->buf);
+	argv[2] = malloc(strlen((char*)key->ptr)*sizeof(char));
+	argvlen[2] = strlen((char*)key->ptr);
+	strcmp(argv[2], (char*)key->ptr);
 }
