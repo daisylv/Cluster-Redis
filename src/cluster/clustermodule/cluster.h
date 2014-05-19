@@ -10,6 +10,9 @@
 
 #include "../libconhash/configure.h"
 
+/* Nodes a list, only to keep the information of the cluster nodes.
+ * The actual hashing is by rb-tree, see the data type in conhash.h
+ */
 typedef struct node_s_inlist {
 	struct node_s *node;
 	struct node_s_inlist *next;
@@ -17,9 +20,11 @@ typedef struct node_s_inlist {
 	struct node_s_inlist *childern;
 } node_s_inlist;
 
+/* Cluster, contains name, child 
+ nodes for hashing, and hash structure to handle*/
 typedef struct cluster {
 	char clustername[64];
-	node_s_inlist* nodelisthead;//head
+	node_s_inlist* nodelisthead;
 	struct conhash_s *conhash;
 } cluster;
 

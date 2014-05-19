@@ -176,7 +176,15 @@ void clusterCommand(redisClient *c) {
 
 }
 
-int dataMigration(cluster *_cluster, char *target, hmap_t socketmap) {
+/*
+ * To migrate data, cluster should be the old cluster configure by user
+ * clustermigrate is the signal
+ *
+ * @target keys to hash
+ * @socketmap map store all the sockets in the cluster
+ */
+int dataMigration(cluster *oldcluster, char *target, hmap_t socketmap) 
+{
 	int count = 0;
 	char **servers = get_all_leaves(_cluster, &count);
 	int flags = 0;
@@ -212,6 +220,13 @@ int dataMigration(cluster *_cluster, char *target, hmap_t socketmap) {
 	}
 }
 
+/*
+ * Implement of data migrate, need to configure the data type and will get protocol-right
+ * command to target server instance.
+ * 
+ * @_newCluster cluster to configure right instance
+ * @redisClient current redisClient, store the info of current connected client
+ */
 int migrate(cluster *_newcluster, redisClient c) {
     dictIterator *di = NULL;
     dictEntry *de;

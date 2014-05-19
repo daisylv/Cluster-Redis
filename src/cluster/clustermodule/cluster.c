@@ -30,6 +30,10 @@ void free_node_s_inlist(node_s_inlist *listnode) {
 	free(listnode);
 }
 
+/*
+ * initialize the cluster
+ * passing NULL to conhash to indicate use default MD5
+ */
 cluster* initialcluster(char *name) {
 	cluster *_cluster;
 	if (!name)
@@ -116,6 +120,12 @@ void removeclusternode(cluster *_cluster, char * nodenamelist) {
 	}
 }
 
+/*
+ * Add node to the cluster.
+ *
+ * @target the node to add
+ * @childnodenamelist path of the node, example: group1.childgroup1.grandchild2
+ */
 void addnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 	if (_cluster == NULL)
 		return;
@@ -162,6 +172,12 @@ void addnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 	conhash_add_node(parent->conhash, newnode->node);
 }
 
+/*
+ * Delete node to the cluster.
+ *
+ * @target the node to add
+ * @childnodenamelist path of the node, example: group1.childgroup1.grandchild2
+ */
 void delnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 	if (!_cluster)
 		return;
@@ -218,9 +234,12 @@ void delnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 	}
 }
 
+/*
+ * Get the leave of the target key in the tree
+ * Iterating.
+ */
 const char* getserver(cluster *_cluster, char *key) {
 	if (!_cluster || !_cluster->nodelisthead) {
-		//print error
 		return NULL;
 	}
 	const struct node_s *cur = conhash_lookup(_cluster->conhash, key);
@@ -231,11 +250,9 @@ const char* getserver(cluster *_cluster, char *key) {
 			pa = (node_s_inlist*)cur->pointer;
 		}
 		else {
-			// error printf
 			return NULL;
 		}
 	}
-	//cur = conhash_lookup(pa->conhash, key);
 	return cur->iden;
 }
 
