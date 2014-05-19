@@ -1051,9 +1051,9 @@ int processMultibulkBuffer(redisClient *c) {
     }
 
 
-    printf("%s\n", (char*)(c->argv[0]->ptr));
-    printf("%s\n", (char*)(c->argv[1]->ptr));
-    printf("%s\n", (char*)(c->argv[2]->ptr));
+//    printf("%s\n", (char*)(c->argv[0]->ptr));
+//    printf("%s\n", (char*)(c->argv[1]->ptr));
+//    printf("%s\n", (char*)(c->argv[2]->ptr));
 
     /* Trim to pos */
     if (pos) sdsrange(c->querybuf,pos,-1);
