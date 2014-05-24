@@ -89,6 +89,7 @@ int getSocket() {
 		}
 	}
 	p = servinfo;
+	printf("%d\n", p->ai_protocol);
 	if ((sfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 		printf("error create socket\n");
 		return -1;
@@ -99,24 +100,6 @@ int getSocket() {
 	}
 	return sfd;
 }
-
-//int getReply(char **reply, int sfd) {
-//	int length = 0;
-//
-////	while (length) {
-//		if (length < 0) {
-//			printf("error receiving data\n");
-//			break;
-//		}
-//		//int write_len = write(1, reply, length);
-////		if (write_len < length) {
-////			printf("write Failed\n");
-////			break;
-////		}
-//		//length = read(sfd, reply, 1024);
-////	}
-//	return 0;
-//}
 
 int main() {
 

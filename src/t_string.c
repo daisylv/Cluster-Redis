@@ -556,6 +556,7 @@ void clusterCommand(redisClient *c) {
 	printf("is redirect...");
 	//char *name = _clusterlisthead->_cluster->clustername;
 	clusterlist* targetCluster = _clusterlisthead;
+	//cluster new mycluster
 	if (strcmp((char*) c->argv[1]->ptr, "new") == 0) {
 		//will add new cluster
 		clusterlist *newCluster_in_list = (clusterlist*) malloc(
@@ -595,7 +596,7 @@ void clusterCommand(redisClient *c) {
 		//write(c->fd, c->buf, c->bufpos);
 		//resetClient(c);
 		return;
-	} else if (c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "add") == 0) {
+	} else if (c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "add") == 0) { //cluster mycluster add group1
 		int index = 3;
 		char nodebuf[256] = "";
 		char* pos = nodebuf;
@@ -610,7 +611,7 @@ void clusterCommand(redisClient *c) {
 		obj->encoding = 0;
 		addReply(c, obj);
 		return;
-	} else if (c->argc == 5 && strcmp((char*) c->argv[3]->ptr, "add") == 0) {
+	} else if (c->argc == 5 && strcmp((char*) c->argv[3]->ptr, "add") == 0) { //cluster mycluster group1 add 127.0.0.1:6379
 		addnodechild(targetCluster->_cluster, (char*) c->argv[4]->ptr,
 				(char*) c->argv[2]->ptr);
 		robj * obj = (robj *) calloc(1, sizeof(robj));
@@ -618,7 +619,7 @@ void clusterCommand(redisClient *c) {
 		obj->encoding = 0;
 		addReply(c, obj);
 		return;
-	} else if(c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "add") == 0) {
+	} else if(c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "remove") == 0) { //cluster mycluster remove 127.0.0.1:6379
 
 	}else {
 		char server[32] = "";
@@ -672,27 +673,42 @@ void clusterCommand(redisClient *c) {
 //		if (redisGetReply(context,&reply) != REDIS_OK) {
 //			printf("%s", reply->str);
 //		}
+		char *info = "will removed to instance ";
 		char buffer[1024] = "";
+		strcpy(buffer, info);
+		int len = strlen(info);
+		char* pos = buffer+len;
+		strcpy(pos, server);
+		len = strlen(server);
+		pos += len;
+		*pos++ = '\r';
+		*pos++ = '\n';
+
 		char *command = context->obuf;
-		char cmd[100] = "";
-		strcpy(cmd, command);
-		printf("%s", command);
-		printf("%s", cmd);
-		send(context->fd, cmd, 1024, 0);
+		//char cmd[100] = "";
+		//strcpy(cmd, command);
+		//printf("%s", command);
+		//printf("%s", cmd);
+		send(context->fd, command, 1024, 0);
 		int length = 0;
-		length = read(context->fd, buffer, 1024);
-		while (length) {
-			if (length < 0) {
-				printf("error receiving data\n");
-				break;
-			}
-			int write_len = write(1, buffer, length);
-			if (write_len < length) {
-				printf("write Failed\n");
-				break;
-			}
-			length = read(context->fd, buffer, 1024);
-		}
+		length = read(context->fd, pos, 1024);
+
+		robj * obj = (robj *) calloc(1, sizeof(robj));
+		obj->ptr = sdsnew(buffer);
+		obj->encoding = 0;
+		addReply(c, obj);
+//		while (length) {
+//			if (length < 0) {
+//				printf("error receiving data\n");
+//				break;
+//			}
+//			int write_len = write(1, buffer, length);
+//			if (write_len < length) {
+//				printf("write Failed\n");
+//				break;
+//			}
+//			length = read(context->fd, buffer, 1024);
+//		}
 		return;
 	}
 
