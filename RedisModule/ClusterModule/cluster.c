@@ -10,7 +10,6 @@
 #include "cluster.h"
 #include "../libconhash/conhash.h"
 
-
 void free_node_s_inlist(node_s_inlist *listnode) {
 	if (listnode->childern) {
 		free_node_s_inlist(listnode->childern);
@@ -185,7 +184,9 @@ void delnodechild(cluster *_cluster, char *target, char *childnodenamelist) {
 	node_s_inlist *parent;
 	node_s_inlist *cur = _cluster->nodelisthead;
 	int flag = 0;
-	char *nodename = strtok(a, ".");
+	//char *nodename = strtok(a, ".");
+	char *pos;
+
 	while (nodename != NULL) {
 		flag = 0;
 		while (cur != NULL) {

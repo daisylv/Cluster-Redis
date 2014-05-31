@@ -317,47 +317,69 @@ clusterlist * loadClusterData(char *filename) {
 	return _clusterlist;
 }
 
-void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
-	if(_clusterlisthead != NULL) {
-		FILE *cdbfd = fopen(filename, "a+");
-		char buffer[64] = "";
-		char *data;
-		data = fgets(buffer, 64, cdbfd);
-		int sum =  atoi(data);
-		clusterlist *cur  = _clusterlisthead;
-		while(cur != NULL) {
-			if(write(cdbfd, cur->_cluster->clustername, 64) <= 0) {
-				break;
-			}
-			++sum;
-			char path[1024] = "";
-			writenodes(cdbfd, _clusterlisthead, path);
+void writechildnodes(FILE *file, node_s_inlist *node_in_list, char *path) {
+	if(path != NULL) {
+		fwrite(path, 1, strlen(path), file);
+		fwrite(" ", 1, 1, file);
+		fwrite(node_in_list->node->iden, 1, strlen(node_in_list->node->iden), file);
+		fwrite("\n", 1, 1, file);
+	}
+	if(node_in_list->next != NULL) {
+		writechildnodes(file, node_in_list->next, path);
+	}
+
+	if(node_in_list->children != NULL) {
+		char full[256] = "";
+		strcat(full, path);
+		if(*full != '\0') {
+			strcat(full, ".");
+			strcat(full, nodelisthead->node->iden);
+			writechildnodes(file, node_in_list->children, full);
+	     	} else {
+			strcat(full, nodelisthead->node->iden);
+			writechildnodes(file, node_in_list->children, full);
 		}
 	}
 }
 
-void writenodes(FILE *file, node_s_inlist *nodelisthead, char *path) {
-	char full[256] = "";
-	strcat(full, path);
-	if(!full) {
-		strcat(full, ".");
+void writenodes(FILE *file, cluster *_cluster) {
+	node_s_inlist *nodes = _cluster->nodelisthead;
+	while(nodes->next != NULL) {
+		fwrite(nodes->node->iden, 1, strlen(nodes->node->iden), file);
+		fwrite(" ", 1, 1, file);
+		nodes = nodes->next;
 	}
-	strcat(full, nodelisthead->node->iden);
-	write(file, full, 256);
-	if (!nodelisthead->next && !nodelisthead->childern) {
-		return;
-	}
-	if (nodelisthead->next) {
-		writenodes(file, nodelisthead->next, path);
-	}	
-	if (!path) {
-		strcat(path, ".");
-		strcat(path, nodelisthead->node->iden);
-	}
-	else {
-		strcat(path, nodelisthead->node->iden);
-	}
-	if (nodelisthead->childern) {
-		writenodes(file, nodelisthead->childern, path);
+	fwrite(nodes->node->iden, 1, strlen(nodes->node->iden), file);
+	fwrite("\n", 1, 1, file);
+	nodes = _cluster->nodelisthead;
+
+//	while(node != NULL) {
+//	char path[128] = "";
+	writechildnodes(file, _cluster->nodelisthead, NULL);
+}
+
+void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
+	if(_clusterlisthead != NULL) {
+		FILE *cdbfd = fopen(filename, "a+");
+		//char buffer[64] = "";
+		//char *data;
+		//data = fgets(buffer, 64, cdbfd);
+		//int sum =  atoi(data);
+		clusterlist *cur  = _clusterlisthead;
+		while(cur != NULL) {
+			if(fwrite(cur->_cluster->clustername, 1, strlen(cur->_cluster->clustername), cdbfd) <= 0) {
+				break;
+			}
+			//++sum;
+			char *str = "\nstart\n";
+			fwrite(str, 1, strlen(str), cdbfd);
+			//char path[1024] = "";
+			writenodes(cdbfd, _clusterlisthead->_cluster);
+			char *str = "end\n";
+			fwrite(str, 1, strlen(str), cdbfd);
+			cur = cur->next;
+		}
+		fclose(cdbfd);
 	}
 }
+
