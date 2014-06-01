@@ -45,4 +45,7 @@ clusterlist* loadClusterData(char *filename);
 
 void saveclusterdb(clusterlist* _clusterlisthead, char *filename);
 
+cluster* getClusterCopy(cluster *_cluster);
+char** get_all_leaves(cluster *target, int *count);
+
 #endif /* CLUSTER_H_ */

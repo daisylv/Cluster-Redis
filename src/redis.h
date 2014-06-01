@@ -894,7 +894,7 @@ void redisSetProcTitle(char *title);
 
 /* networking.c -- Networking and Client related operations */
 redisClient *createClient(int fd);
-void LoadClusterData(char *filename);
+//void LoadClusterData(char *filename);
 void closeTimedoutClients(void);
 void freeClient(redisClient *c);
 void freeClientAsync(redisClient *c);
@@ -1214,6 +1214,7 @@ void authCommand(redisClient *c);
 void pingCommand(redisClient *c);
 void echoCommand(redisClient *c);
 void clusterCommand(redisClient *c);
+void startMigrateCommand(redisClient *c);
 void setCommand(redisClient *c);
 void setnxCommand(redisClient *c);
 void setexCommand(redisClient *c);

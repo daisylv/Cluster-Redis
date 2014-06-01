@@ -375,8 +375,8 @@ void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
 			fwrite(str, 1, strlen(str), cdbfd);
 			//char path[1024] = "";
 			writenodes(cdbfd, _clusterlisthead->_cluster);
-			char *str = "end\n";
-			fwrite(str, 1, strlen(str), cdbfd);
+			char *strend = "end\n";
+			fwrite(strend, 1, strlen(strend), cdbfd);
 			cur = cur->next;
 		}
 		fclose(cdbfd);
@@ -409,22 +409,24 @@ void copyAllChildren(cluster *copyCluster, node_s_inlist *node, char *path) {
 	}
 }
 
-char **get_all_leaves(cluster *_cluster) {
+char **get_all_leaves(cluster *_cluster, int *count) {
 	char **ret;
 	//at most 10 servers
 	ret = malloc(10*sizeof(char*));
 	node_s_inlist *listnode = _cluster->nodelisthead;
-	int len = 0;
-	getleaves(_cluster, &ret, &len);
+	//int len = 0;
+	getleaves(_cluster, &ret, &count);
 	return ret;
 }
 
 void getleaves(node_s_inlist *nodelist, char ***ret, int *len) {
-	if(len >= 10) {
+	if(*len >= 10) {
 		return;
 	}
 	if(!nodelist->conhash) {
-		ret[len++] = malloc(sizeof(char)*sizeof(nodelist->node->iden));
+		char *newc = malloc(sizeof(nodelist->node->iden));
+		ret[*len] = newc;
+		++(*len);
 	}
 	if(nodelist->next) {
 		getleaves(nodelist->next, &ret, len);

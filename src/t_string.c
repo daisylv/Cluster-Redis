@@ -489,6 +489,8 @@ void strlenCommand(redisClient *c) {
 
 extern clusterlist *_clusterlisthead;
 extern char selfServer[20];
+extern cluster *oldcluster;
+cluster *target;
 /*
  * Store the socket file discriptor.
  * key: 'ip:port'
@@ -547,6 +549,60 @@ int appendleftCommandArgv(char **target, int argc, const char **argv,
 	*target = cmd;
 	return totlen;
 }
+
+/*
+ * To migrate data, cluster should be the old cluster configure by user
+ * clustermigrate is the signal
+ *
+ * @target keys to hash
+ * @socketmap map store all the sockets in the cluster
+ */
+int dataMigration(hmap_t socketmap) {
+	int count = 0;
+	char **servers = (char**) get_all_leaves(oldcluster, &count);
+	int flags = 0;
+	int i = 0;
+	redisContext *context = NULL;
+	for (; i < count; ++i) {
+		char *server = servers[i];
+		int ret = hashmap_get(socketmap, server, context);
+		if (ret < 0 || !context) {
+			struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+			char *ipaddress = strtok(server, ":");
+			int port = atoi(strtok(NULL, ":"));
+			context = redisConnectWithTimeout(ipaddress, port, timeout);
+//			sfd = getConnectSocket(server);
+			hashmap_put(socketmap, server, context);
+		}
+		//cluster name migrate
+		size_t *argvlen = malloc(sizeof(size_t));
+		char *cmd = malloc(13 * sizeof(char));
+		strcpy(cmd, "startmigrate\0");
+		argvlen[0] = strlen(cmd);
+		char **argv = malloc(1 * sizeof(char*));
+		argv[0] = cmd;
+		appendleftCommandArgv(&(context->obuf), 1, argv, argvlen);
+		write(context->fd, context->obuf, 128);
+
+		char buffer[10] = "";
+		read(context->fd, buffer, 10);
+		if (strcmp(buffer, "done") == 0) {
+			flags++;
+		}
+		if (flags == count) {
+			break;
+		}
+	}
+	return flags;
+}
+
+void addReplyBeforeReturn(const char* msg, redisClient *c) {
+	robj * obj = (robj *) calloc(1, sizeof(robj));
+	obj->ptr = sdsnew(msg);
+	obj->encoding = 0;
+	addReply(c, obj);
+}
+
 /*
  * Process cluster-related command,
  * first will get the cluster and send redis command to target server
@@ -613,7 +669,8 @@ void clusterCommand(redisClient *c) {
 		char* pos = nodebuf;
 		while (index < c->argc) {
 			strcpy(pos, (char*) c->argv[index]->ptr);
-			*(++pos) = " ";
+			++pos;
+			*pos = ' ';
 			pos += strlen((char*) c->argv[index]->ptr);
 		}
 		clusteraddnode(targetCluster->_cluster, nodebuf);
@@ -635,49 +692,49 @@ void clusterCommand(redisClient *c) {
 	} else if (c->argc >= 4 && strcmp((char*) c->argv[2]->ptr, "remove") == 0) {
 		//cluster mycluster remove group1.cgroup1 127.0.0.1:6379
 		//cluster mycluster remove group1
-		if(c->argc >= 5) {
-			delnodechild(target, c->argv[4], c->argc[3]);
+		if (c->argc >= 5) {
+			delnodechild(target, (char*) c->argv[4]->ptr,
+					(char*) c->argv[3]->ptr);
 		}
-		if(c->argc >= 4) {
-			removeclusternode(target, c->argv[3]);
+		if (c->argc >= 4) {
+			removeclusternode(target, (char*) c->argv[3]->ptr);
 		}
 
 		addReplyBeforeReturn("remove nodes successfully(:", c);
 		return;
 
-	} else if (strcmp(c->argv[1], "migrate") == 0) {	//cluster migrate
+	} else if (strcmp((char*) c->argv[1]->ptr, "migrate") == 0) {//cluster migrate
 		char buf[128] = "";
 		char *str = "begin to migrate data, please wait...";
 		strcpy(buf, str);
 		write(c->fd, buf, strlen(str));
 
-		robj obj = (robj *) malloc(sizeof(robj));
+		robj *obj = (robj *) malloc(sizeof(robj));
 		obj->encoding = 0;
-		pid_t childpid;
-		long long start;
-		start = ustime();
-		if ((childpid = fork()) == 0) {
-			int retval;
+//		pid_t childpid;
+//		long long start;
+//		start = ustime();
+//		if ((childpid = fork()) == 0) {
+		int retval;
 
-			/* Child */
-			closeListeningSockets(0);
+		/* Child */
+		//closeListeningSockets(0);
+		retval = dataMigration(socketmap);
 
-			retval = dataMigration(socketmap);
-
-			if (retval == 0) {
-				obj->ptr = sdsnew("data migrate finished!");
-			}
-			exitFromChild((retval == 0) ? 0 : 1);
-		} else {
-			/* Parent */
-			server.stat_fork_time = ustime() - start;
-			if (childpid == -1) {
-				obj->ptr = sdsnew("data migrate error!");
-			}
-
-			addReply(c, obj);
-			return;
+		if (retval == 0) {
+			obj->ptr = sdsnew("data migrate finished!");
 		}
+//			exitFromChild((retval == 0) ? 0 : 1);
+		else {
+			/* Parent */
+//			server.stat_fork_time = ustime() - start;
+//			if (childpid == -1) {
+			obj->ptr = sdsnew("data migrate error!");
+//			}
+		}
+		addReply(c, obj);
+		return;
+
 	} else if (c->argc >= 3 && (strcmp(c->argv[2], "save") == 0)) {
 		//cluster myclster save
 		oldcluster = getClusterCopy(targetCluster->_cluster);
@@ -778,12 +835,6 @@ void clusterCommand(redisClient *c) {
 
 }
 
-void addReplyBeforeReturn(const char* msg, redisClient *c) {
-	robj * obj = (robj *) calloc(1, sizeof(robj));
-	obj->ptr = sdsnew(msg);
-	obj->encoding = 0;
-	addReply(c, obj);
-}
 // /*
 //  * Create a new socket and connect to the socket.
 //  * Will add to the hashmap if success.
@@ -838,55 +889,26 @@ void addReplyBeforeReturn(const char* msg, redisClient *c) {
 //		length += len;
 //	}
 //}
-/*
- * To migrate data, cluster should be the old cluster configure by user
- * clustermigrate is the signal
- *
- * @target keys to hash
- * @socketmap map store all the sockets in the cluster
- */
-int dataMigration(hmap_t socketmap) {
-	int count = 0;
-	char **servers = get_all_leaves(oldcluster, &count);
-	int flags = 0;
-	int i = 0;
-	redisContext context;
-	for (; i < count; ++i) {
-		char *server = servers[i];
-		int ret = hashmap_get(socketmap, server, context);
-		if (ret < 0 || !context) {
-			struct timeval timeout = { 1, 500000 }; // 1.5 seconds
-			char *ipaddress = strtok(server, ":");
-			int port = atoi(strtok(NULL, ":"));
-			context = redisConnectWithTimeout(ipaddress, port, timeout);
-//			sfd = getConnectSocket(server);
-			hashmap_put(socketmap, server, context);
-		}
-		//cluster name migrate
-		size_t *argvlen = malloc(sizeof(size_t));
-		char *cmd = malloc(13 * sizeof(char));
-		strcpy(cmd, "startmigrate\0");
-		argvlen[0] = strlen(cmd);
-		char **argv = malloc(1 * sizeof(char*));
-		argv[0] = cmd;
 
-		appendleftCommandArgv(&(context->obuf), 1, argv, argvlen);
-		write(context->fd, context->obuf, 128);
-
-		char buffer[10] = "";
-		read(context->fd, buffer, 10);
-		if (strcmp(buffer, "done") == 0) {
-			flags++;
-		}
-		if (flags == count) {
-			break;
-		}
-	}
-	return flags;
+void appendMigrateCommand(redisClient *c, char* serveraddr, char* key) {
+	//migrate 127.0.0.1 7777 greeting 0 1000
+	c->argv = malloc(6 * sizeof(char*));
+	c->argv[0] = malloc(strlen("migrate") * sizeof(char));
+	strcpy((char*) c->argv[0]->ptr, "migrate");
+	char *ip = strtok(serveraddr, ":");
+	c->argv[1] = malloc(strlen(ip) * sizeof(char));
+	strcpy((char*) c->argv[1]->ptr, ip);
+	char *port = strtok("NULL", ":");
+	c->argv[2] = malloc(strlen(port) * sizeof(char));
+	strcpy((char*) c->argv[2]->ptr, port);
+	c->argv[3] = malloc(strlen(key) * sizeof(char));
+	strcpy((char*) c->argv[3]->ptr, key);
+	c->argv[4] = malloc(sizeof(char));
+	strcpy((char*) c->argv[4]->ptr, "0");
+	c->argv[5] = malloc(strlen("2000") * sizeof(char));
+	strcpy((char*) c->argv[5]->ptr, "2000");
+	c->argc = 6;
 }
-
-extern cluster *oldcluster;
-cluster *target;
 /*
  * Implement of data migrate, need to configure the data type and will get protocol-right
  * command to target server instance.
@@ -895,37 +917,41 @@ cluster *target;
  * @_newCluster cluster to configure right instance
  * @redisClient current redisClient, store the info of current connected client
  */
-int startMigrateCommand(redisClient c) {
-	//should fork here
-	dictIterator *di = NULL;
-	dictEntry *de;
-	int j;
-	long long now = mstime();
+void startMigrateCommand(redisClient *c) {
+	pid_t childpid;
+	long long start;
+	start = usetime();
+	if ((childpid = fork()) == 0) {
+		dictIterator *di = NULL;
+		dictEntry *de;
+		int j;
+		long long now = mstime();
 
-	for (j = 0; j < server.dbnum; j++) {
-		redisDb *db = server.db + j;
-		dict *d = db->dict;
-		if (dictSize(d) == 0)
-			continue;
-		di = dictGetSafeIterator(d);
-		if (!di) {
-			return REDIS_ERR;
-		}
-
-		/* Iterate this DB writing every entry */
-		while ((de = dictNext(di)) != NULL) {
-			sds keystr = dictGetKey(de);
-			//robj key, *o = dictGetVal(de);
-			char *newserver;
-			//initStaticStringObject(key,keystr);
-			newserver = getserver(target, keystr);
-			if (strcmp(newserver, selfServer) == 0) {
+		for (j = 0; j < server.dbnum; j++) {
+			redisDb *db = server.db + j;
+			dict *d = db->dict;
+			if (dictSize(d) == 0)
 				continue;
-			} else {
-				//char sendbuffer[256] = "";
-				appendMigrateCommand(c, newserver, keystr);
+			di = dictGetSafeIterator(d);
+			if (!di) {
+				return;
+			}
 
-				processCommand(c);
+			/* Iterate this DB writing every entry */
+			while ((de = dictNext(di)) != NULL) {
+				sds keystr = dictGetKey(de);
+				//robj key, *o = dictGetVal(de);
+				char *newserver;
+				//initStaticStringObject(key,keystr);
+				newserver = getserver(target, keystr);
+				if (strcmp(newserver, selfServer) == 0) {
+					continue;
+				} else {
+					//char sendbuffer[256] = "";
+					appendMigrateCommand(c, newserver, keystr);
+
+					processCommand(c);
+				}
 				//robj key= dictGetVal(de);
 				//redisContext *context = NULL;
 				//int ret = hashmap_get(socketmap, newserver, context);
@@ -946,29 +972,22 @@ int startMigrateCommand(redisClient c) {
 //
 //				send(context->fd, context->obuf, 1024, 0);
 			}
+
+			dictReleaseIterator(di);
 		}
-		dictReleaseIterator(di);
+	} else {
+		/* Parent */
+		server.stat_fork_time = ustime() - start;
+		robj *obj = (robj*)malloc(sizeof(robj));
+		obj->encoding = 0;
+		if (childpid == -1) {
+			obj->ptr = sdsnew("data migrate error!");
+			addReply(c, obj);
+			return;
+		}
 	}
 }
-void appendMigrateCommand(redisClient *c, char* serveraddr, char* key) {
-	//migrate 127.0.0.1 7777 greeting 0 1000
-	c->argv = malloc(6 * sizeof(char*));
-	c->argv[0] = malloc(strlen("migrate") * sizeof(char));
-	strcpy(c->argv[0], "migrate");
-	char *ip = strtok(serveraddr, ":");
-	c->argv[1] = malloc(strlen(ip) * sizeof(char));
-	strcpy(c->argv[1], ip);
-	char *port = strtok("NULL", ":");
-	c->argv[2] = malloc(strlen(port) * sizeof(char));
-	strcpy(c->argv[2], port);
-	c->argv[3] = malloc(strlen(key) * sizeof(char));
-	strcpy(c->argv[3], key);
-	c->argv[4] = malloc(sizeof(char));
-	strcpy(c->argv[4], "0");
-	c->argv[5] = malloc(strlen("2000") * sizeof(char));
-	strcpy(c->argv[5], "2000");
-	c->argc = 6;
-}
+
 //void getReSendCommand(size_t **argvlen, char ***argv) {
 //	argv[0] = malloc(3*sizeof(char));
 //	argvlen[0] = 3;

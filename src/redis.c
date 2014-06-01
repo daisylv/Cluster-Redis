@@ -3038,13 +3038,14 @@ void redisSetProcTitle(char *title) {
 #endif
 }
 
+char selfServer[20] = "";
 int main(int argc, char **argv) {
 
 	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster2.cdb");
 	printf("%s\n",_clusterlisthead->_cluster->clustername);
-	oldcluster = getClusterCopy(_clusterlisthead->_cluster);
-	char selfServer[20] = "";
-	sprintf(selfServer, "127.0.0.1:%d", server->port);
+	oldcluster = (cluster *)getClusterCopy(_clusterlisthead->_cluster);
+
+	sprintf(selfServer, "127.0.0.1:%d", server.port);
 	socketmap = hashmap_create();
     struct timeval tv;
 
