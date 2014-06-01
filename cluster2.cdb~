@@ -1,11 +1,7 @@
 1
 start
-mycluster
+testcluster
 group1 group2
-group1 childgroup1
-group1 childgroup2
-group1.childgroup1 127.0.0.1:6379 
-group1.childgroup1 127.0.0.1:6380
-group1.childgroup2 127.0.0.1:6381
-group2 127.0.0.1:6382
+group1 127.0.0.1:6379
+group2 127.0.0.1:6380
 end

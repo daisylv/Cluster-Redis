@@ -328,16 +328,16 @@ void writechildnodes(FILE *file, node_s_inlist *node_in_list, char *path) {
 		writechildnodes(file, node_in_list->next, path);
 	}
 
-	if(node_in_list->children != NULL) {
+	if(node_in_list->childern != NULL) {
 		char full[256] = "";
 		strcat(full, path);
 		if(*full != '\0') {
 			strcat(full, ".");
-			strcat(full, nodelisthead->node->iden);
-			writechildnodes(file, node_in_list->children, full);
+			strcat(full, node_in_list->node->iden);
+			writechildnodes(file, node_in_list->childern, full);
 	     	} else {
-			strcat(full, nodelisthead->node->iden);
-			writechildnodes(file, node_in_list->children, full);
+			strcat(full, node_in_list->node->iden);
+			writechildnodes(file, node_in_list->childern, full);
 		}
 	}
 }
@@ -383,3 +383,53 @@ void saveclusterdb(clusterlist* _clusterlisthead, char *filename) {
 	}
 }
 
+cluster *getClusterCopy(cluster *target) {
+	cluster *copyCluster = initialcluster(target->clustername);
+	node_s_inlist *node = target->nodelisthead;
+	while(node != NULL) {
+		clusteraddnode(copyCluster, node->node->iden);
+		char path[128] = "";
+		strcpy(path, node->node->iden);
+		copyAllChildren(copyCluster, node->childern, path);
+		node = node->next;
+	}
+	return copyCluster;
+}
+void copyAllChildren(cluster *copyCluster, node_s_inlist *node, char *path) {
+	addnodechild(copyCluster, node->node->iden, path);
+	if(node->next) {
+		copyAllChildren(copyCluster, node->next, path);
+	}
+	if(node->childern) {
+		char childpath[128] = "";
+		strcpy(childpath, path);
+		strcat(childpath, ".");
+		strcat(childpath, node->node->iden);
+		copyAllChildren(copyCluster, node->childern, childpath);
+	}
+}
+
+char **get_all_leaves(cluster *_cluster) {
+	char **ret;
+	//at most 10 servers
+	ret = malloc(10*sizeof(char*));
+	node_s_inlist *listnode = _cluster->nodelisthead;
+	int len = 0;
+	getleaves(_cluster, &ret, &len);
+	return ret;
+}
+
+void getleaves(node_s_inlist *nodelist, char ***ret, int *len) {
+	if(len >= 10) {
+		return;
+	}
+	if(!nodelist->conhash) {
+		ret[len++] = malloc(sizeof(char)*sizeof(nodelist->node->iden));
+	}
+	if(nodelist->next) {
+		getleaves(nodelist->next, &ret, len);
+	}
+	if(nodelist->childern) {
+		getleaves(nodelist->childern, &ret, len);
+	}
+}

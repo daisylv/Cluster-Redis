@@ -121,6 +121,7 @@ struct redisCommand *commandTable;
  */
 struct redisCommand redisCommandTable[] = {
 	{"cluster",clusterCommand,-2,"wma",0,NULL,1,1,1,0,0},
+	{"startmigrate", startMigrateCommand, -2,"wma",0,NULL,1,1,1,0,0},
     {"get",getCommand,2,"r",0,NULL,1,1,1,0,0},
     {"set",setCommand,-3,"wm",0,noPreloadGetKeys,1,1,1,0,0},
     {"setnx",setnxCommand,3,"wm",0,noPreloadGetKeys,1,1,1,0,0},
@@ -3023,6 +3024,8 @@ void redisOutOfMemoryHandler(size_t allocation_size) {
 
 clusterlist *_clusterlisthead;
 hmap_t socketmap;
+cluster *oldcluster;
+cluster *newcluster;
 
 void redisSetProcTitle(char *title) {
 #ifdef USE_SETPROCTITLE
@@ -3039,6 +3042,9 @@ int main(int argc, char **argv) {
 
 	_clusterlisthead = loadClusterData("/home/daisy/Desktop/redis-2.8.8/cluster2.cdb");
 	printf("%s\n",_clusterlisthead->_cluster->clustername);
+	oldcluster = getClusterCopy(_clusterlisthead->_cluster);
+	char selfServer[20] = "";
+	sprintf(selfServer, "127.0.0.1:%d", server->port);
 	socketmap = hashmap_create();
     struct timeval tv;
 
